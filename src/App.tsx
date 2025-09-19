@@ -295,233 +295,9 @@ function App() {
 
         {/* Operation Tab - Map Editor & Robot Operations */}
         {activeTab === 'operation' && (
-          <div className="h-full flex">
-            {/* Collapsible Left Sidebar - Operation Tools */}
-            <div className={`bg-white border-r shadow-sm transition-all duration-300 overflow-y-auto ${
-              sidebarCollapsed ? 'w-12' : 'w-80'
-            }`}>
-              {/* Sidebar Header with Toggle */}
-              <div className="p-3 border-b bg-blue-50 flex items-center justify-between">
-                {!sidebarCollapsed && (
-                  <h2 className="font-semibold text-blue-800 text-sm">Operation Panel</h2>
-                )}
-                <button
-                  onClick={toggleSidebar}
-                  className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors text-blue-600"
-                >
-                  {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                </button>
-              </div>
-
-              {/* Sidebar Content */}
-              <div className="h-[calc(100%-57px)]">
-                {!sidebarCollapsed ? (
-                  <div className="p-4 space-y-3">
-                    {/* Edit Maps Section */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleSection('editMaps')}
-                        className="w-full p-3 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center justify-between text-left border-b"
-                      >
-                        <div className="flex items-center">
-                          <MapPin className="mr-2 text-blue-600" size={16} />
-                          <span className="font-medium text-blue-800 text-sm">Edit Maps</span>
-                        </div>
-                        {expandedSections.editMaps ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </button>
-                      
-                      {expandedSections.editMaps && (
-                        <div className="p-4 space-y-3 bg-white">
-                          <button
-                            onClick={() => console.log('Add Point mode activated - click on map')}
-                            className="w-full px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm font-medium"
-                          >
-                            Add Point
-                          </button>
-                          <button
-                            onClick={handleEditSelectedGoal}
-                            disabled={!selectedGoalId}
-                            className={`w-full px-3 py-2 rounded text-sm font-medium ${
-                              selectedGoalId 
-                                ? 'bg-green-500 text-white hover:bg-green-600' 
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                          >
-                            Edit Selected
-                          </button>
-                          <button
-                            onClick={handleDeleteSelectedGoal}
-                            disabled={!selectedGoalId}
-                            className={`w-full px-3 py-2 rounded text-sm font-medium ${
-                              selectedGoalId 
-                                ? 'bg-red-500 text-white hover:bg-red-600' 
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                          >
-                            Delete Selected
-                          </button>
-                          
-                          {/* Selected Goal Info */}
-                          {selectedGoalId && (
-                            <div className="mt-3 p-3 bg-gray-50 rounded-lg text-xs">
-                              <p className="font-medium text-gray-700">Selected Goal:</p>
-                              {(() => {
-                                const goal = goals.find(g => g.id === selectedGoalId);
-                                return goal ? (
-                                  <div className="mt-1 space-y-1">
-                                    <p><strong>Name:</strong> {goal.name}</p>
-                                    <p><strong>Position:</strong> ({goal.x.toFixed(2)}, {goal.y.toFixed(2)})</p>
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          )}
-                          
-                          <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded">
-                            💡 Click on map to add goals, click existing goals to select/edit
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Task Management Section */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleSection('taskManagement')}
-                        className="w-full p-3 bg-green-50 hover:bg-green-100 transition-colors flex items-center justify-between text-left border-b"
-                      >
-                        <div className="flex items-center">
-                          <Activity className="mr-2 text-green-600" size={16} />
-                          <span className="font-medium text-green-800 text-sm">Task Management</span>
-                        </div>
-                        {expandedSections.taskManagement ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </button>
-                      
-                      {expandedSections.taskManagement && (
-                        <div className="p-4 space-y-3 bg-white">
-                          <button className="w-full px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm font-medium">
-                            Create Multi-Point Task
-                          </button>
-                          <button className="w-full px-3 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm font-medium">
-                            Schedule Task
-                          </button>
-                          <button className="w-full px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium">
-                            View Task History
-                          </button>
-                          <div className="text-xs text-green-700 bg-green-50 p-2 rounded">
-                            🚧 Task management features coming soon
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Robot Settings Section */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleSection('robotSetting')}
-                        className="w-full p-3 bg-orange-50 hover:bg-orange-100 transition-colors flex items-center justify-between text-left border-b"
-                      >
-                        <div className="flex items-center">
-                          <Settings className="mr-2 text-orange-600" size={16} />
-                          <span className="font-medium text-orange-800 text-sm">Robot Setting</span>
-                        </div>
-                        {expandedSections.robotSetting ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </button>
-                      
-                      {expandedSections.robotSetting && (
-                        <div className="p-4 space-y-3 bg-white">
-                          <div>
-                            <label className="block text-sm font-medium text-orange-700 mb-1">
-                              Linear Speed: {maxLinear.toFixed(1)} m/s
-                            </label>
-                            <input
-                              type="range"
-                              min="0.1"
-                              max="2.0"
-                              step="0.1"
-                              value={maxLinear}
-                              onChange={(e) => setMaxLinear(parseFloat(e.target.value))}
-                              className="w-full accent-orange-500"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-orange-700 mb-1">
-                              Angular Speed: {maxAngular.toFixed(1)} rad/s
-                            </label>
-                            <input
-                              type="range"
-                              min="0.1"
-                              max="3.0"
-                              step="0.1"
-                              value={maxAngular}
-                              onChange={(e) => setMaxAngular(parseFloat(e.target.value))}
-                              className="w-full accent-orange-500"
-                            />
-                          </div>
-
-                          <button className="w-full px-3 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-medium">
-                            Apply Settings
-                          </button>
-                          
-                          <div className="text-xs text-orange-700 bg-orange-50 p-2 rounded">
-                            🚧 Advanced robot settings coming soon
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Current Map Info */}
-                    {selectedMap && (
-                      <div className="bg-gray-50 p-3 rounded-lg border">
-                        <h3 className="font-medium text-gray-800 mb-2 text-sm">Active Map</h3>
-                        <p className="text-xs text-gray-600">{selectedMap}</p>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Goals: {goals.length} | Mode: Edit
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Collapsed sidebar icons */
-                  <div className="p-2 space-y-2">
-                    <button
-                      onClick={() => {
-                        setSidebarCollapsed(false);
-                        setExpandedSections(prev => ({ ...prev, editMaps: true }));
-                      }}
-                      className="w-full p-2 rounded-lg hover:bg-blue-100 transition-colors text-blue-600"
-                      title="Edit Maps"
-                    >
-                      <MapPin size={16} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSidebarCollapsed(false);
-                        setExpandedSections(prev => ({ ...prev, taskManagement: true }));
-                      }}
-                      className="w-full p-2 rounded-lg hover:bg-green-100 transition-colors text-green-600"
-                      title="Task Management"
-                    >
-                      <Activity size={16} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSidebarCollapsed(false);
-                        setExpandedSections(prev => ({ ...prev, robotSetting: true }));
-                      }}
-                      className="w-full p-2 rounded-lg hover:bg-orange-100 transition-colors text-orange-600"
-                      title="Robot Setting"
-                    >
-                      <Settings size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Map Canvas - Operation Mode */}
-            <div className="flex-1 p-6">
+          <div className="h-full relative">
+            {/* Full Screen Map Canvas */}
+            <div className="h-full p-6">
               {localMapData ? (
                 <MapCanvas
                   mapData={localMapData}
@@ -530,7 +306,7 @@ function App() {
                   onMapClick={handleMapClick}
                   onGoalClick={handleGoalClick}
                   selectedGoalId={selectedGoalId}
-                  className="w-full h-full cursor-crosshair"
+                  className="w-full h-full"
                 />
               ) : (
                 <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
@@ -545,6 +321,227 @@ function App() {
                       Go to Building
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Floating Operation Panel */}
+            <div className={`fixed top-24 left-6 bg-white/95 backdrop-blur-sm shadow-xl rounded-xl border border-gray-200 transition-all duration-300 z-50 ${
+              sidebarCollapsed ? 'w-14' : 'w-80'
+            } max-h-[calc(100vh-120px)] overflow-hidden`}>
+              {/* Panel Header */}
+              <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-gray-50/80">
+                {!sidebarCollapsed && (
+                  <h2 className="font-semibold text-gray-800 text-sm flex items-center">
+                    <Settings className="mr-2 text-blue-600" size={16} />
+                    Operation Panel
+                  </h2>
+                )}
+                <button
+                  onClick={toggleSidebar}
+                  className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-800"
+                >
+                  {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                </button>
+              </div>
+
+              {/* Panel Content */}
+              {!sidebarCollapsed ? (
+                <div className="overflow-y-auto max-h-[calc(100vh-180px)] p-3 space-y-3">
+                  {/* Edit Maps Section */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    <button
+                      onClick={() => toggleSection('editMaps')}
+                      className="w-full p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between text-left"
+                    >
+                      <div className="flex items-center">
+                        <MapPin className="mr-2 text-blue-600" size={14} />
+                        <span className="font-medium text-gray-800 text-xs">Edit Maps</span>
+                      </div>
+                      {expandedSections.editMaps ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    
+                    {expandedSections.editMaps && (
+                      <div className="p-3 space-y-2 bg-white border-t border-gray-100">
+                        <button
+                          onClick={() => console.log('Add Point mode activated - click on map')}
+                          className="w-full px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium transition-colors"
+                        >
+                          Add Point
+                        </button>
+                        <button
+                          onClick={handleEditSelectedGoal}
+                          disabled={!selectedGoalId}
+                          className={`w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                            selectedGoalId 
+                              ? 'bg-gray-800 text-white hover:bg-gray-900' 
+                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Edit Selected
+                        </button>
+                        <button
+                          onClick={handleDeleteSelectedGoal}
+                          disabled={!selectedGoalId}
+                          className={`w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                            selectedGoalId 
+                              ? 'bg-red-600 text-white hover:bg-red-700' 
+                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Delete Selected
+                        </button>
+                        
+                        {/* Selected Goal Info */}
+                        {selectedGoalId && (
+                          <div className="mt-2 p-2 bg-blue-50 rounded-md text-xs border border-blue-100">
+                            <p className="font-medium text-blue-800 mb-1">Selected Goal:</p>
+                            {(() => {
+                              const goal = goals.find(g => g.id === selectedGoalId);
+                              return goal ? (
+                                <div className="space-y-0.5 text-blue-700">
+                                  <p><span className="font-medium">Name:</span> {goal.name}</p>
+                                  <p><span className="font-medium">Position:</span> ({goal.x.toFixed(2)}, {goal.y.toFixed(2)})</p>
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        )}
+                        
+                        <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded-md border border-blue-100">
+                          💡 Click on map to add goals
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Task Management Section */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    <button
+                      onClick={() => toggleSection('taskManagement')}
+                      className="w-full p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between text-left"
+                    >
+                      <div className="flex items-center">
+                        <Activity className="mr-2 text-blue-600" size={14} />
+                        <span className="font-medium text-gray-800 text-xs">Task Management</span>
+                      </div>
+                      {expandedSections.taskManagement ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    
+                    {expandedSections.taskManagement && (
+                      <div className="p-3 space-y-2 bg-white border-t border-gray-100">
+                        <button className="w-full px-2.5 py-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-900 text-xs font-medium transition-colors">
+                          Multi-Point Task
+                        </button>
+                        <button className="w-full px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium transition-colors">
+                          Schedule Task
+                        </button>
+                        <button className="w-full px-2.5 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-medium transition-colors">
+                          Task History
+                        </button>
+                        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md border border-gray-100">
+                          🚧 Coming soon
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Robot Settings Section */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    <button
+                      onClick={() => toggleSection('robotSetting')}
+                      className="w-full p-2.5 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between text-left"
+                    >
+                      <div className="flex items-center">
+                        <Settings className="mr-2 text-blue-600" size={14} />
+                        <span className="font-medium text-gray-800 text-xs">Robot Settings</span>
+                      </div>
+                      {expandedSections.robotSetting ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    
+                    {expandedSections.robotSetting && (
+                      <div className="p-3 space-y-3 bg-white border-t border-gray-100">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Linear: {maxLinear.toFixed(1)} m/s
+                          </label>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="2.0"
+                            step="0.1"
+                            value={maxLinear}
+                            onChange={(e) => setMaxLinear(parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Angular: {maxAngular.toFixed(1)} rad/s
+                          </label>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="3.0"
+                            step="0.1"
+                            value={maxAngular}
+                            onChange={(e) => setMaxAngular(parseFloat(e.target.value))}
+                            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <button className="w-full px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium transition-colors">
+                          Apply Settings
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current Map Info */}
+                  {selectedMap && (
+                    <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                      <h3 className="font-medium text-gray-800 mb-1 text-xs">Active Map</h3>
+                      <p className="text-xs text-gray-600 font-mono">{selectedMap}</p>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Goals: {goals.length} | Mode: Edit
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Collapsed Panel - Icon Only */
+                <div className="p-2 space-y-2">
+                  <button
+                    onClick={() => {
+                      setSidebarCollapsed(false);
+                      setExpandedSections(prev => ({ ...prev, editMaps: true }));
+                    }}
+                    className="w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-blue-600"
+                    title="Edit Maps"
+                  >
+                    <MapPin size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSidebarCollapsed(false);
+                      setExpandedSections(prev => ({ ...prev, taskManagement: true }));
+                    }}
+                    className="w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-blue-600"
+                    title="Task Management"
+                  >
+                    <Activity size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSidebarCollapsed(false);
+                      setExpandedSections(prev => ({ ...prev, robotSetting: true }));
+                    }}
+                    className="w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-blue-600"
+                    title="Robot Settings"
+                  >
+                    <Settings size={16} />
+                  </button>
                 </div>
               )}
             </div>
