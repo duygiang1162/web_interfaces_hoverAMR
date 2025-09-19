@@ -6,6 +6,8 @@ import { GoalManager } from './components/Goals/GoalManager';
 import { useWebSocket } from './hooks/useWebSocket';
 import { GoalPoint, MapData } from './types/robot';
 import { StorageService } from './utils/storage';
+import { PointDataService } from './services/pointDataService';
+import { MapParser } from './services/mapParser';
 import { Wifi, WifiOff, Activity, MapPin, Settings, Monitor, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 
 function App() {
@@ -19,6 +21,8 @@ function App() {
   const [localMapData, setLocalMapData] = useState<MapData | null>(null);
   const [selectedMap, setSelectedMap] = useState<string | null>(null); // Track selected map
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [mouseWorldCoords, setMouseWorldCoords] = useState<{x: number, y: number} | null>(null);
+  const [isAddPointMode, setIsAddPointMode] = useState(false); // Toggle mode for adding points by clicking
   
   // Sidebar state for Operation tab
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -88,19 +92,116 @@ function App() {
     setGoals(savedGoals);
   }, []);
 
-  // Handle map click để tạo goal
-  const handleMapClick = (worldX: number, worldY: number) => {
-    const goalName = `Goal ${goals.length + 1}`;
-    const newGoal: GoalPoint = {
-      id: `goal-${Date.now()}`,
-      name: goalName,
-      x: worldX,
-      y: worldY,
-      timestamp: Date.now()
+  // Load map-specific points when selectedMap changes
+  useEffect(() => {
+    const loadMapPoints = async () => {
+      if (selectedMap) {
+        try {
+          const mapPoints = await PointDataService.getPointsForMap(selectedMap);
+          if (mapPoints.length > 0) {
+            setGoals(mapPoints);
+            console.log(`Loaded ${mapPoints.length} points for map: ${selectedMap}`);
+          }
+        } catch (error) {
+          console.error('Failed to load points for map:', selectedMap, error);
+        }
+      }
     };
+    
+    loadMapPoints();
+  }, [selectedMap]);
 
-    StorageService.addGoal(newGoal);
-    setGoals([...goals, newGoal]);
+  // Handle adding point from current mouse position
+  // Toggle add point mode (click to enable/disable point adding)
+  const handleToggleAddPointMode = () => {
+    setIsAddPointMode(!isAddPointMode);
+    console.log(isAddPointMode ? '🚫 Exited add point mode' : '🎯 Entered add point mode - click on map to add points');
+  };
+
+  // Handle adding point from current robot pose
+  const handleAddPointFromRobot = async () => {
+    if (robotPose && selectedMap) {
+      console.log('🤖 Adding point from robot pose:');
+      console.log('  Robot pose (world coords):', robotPose.position);
+      console.log('  Map data available:', !!localMapData);
+      
+      if (localMapData) {
+        console.log('  Map origin:', localMapData.origin);
+        console.log('  Map resolution:', localMapData.resolution);
+        console.log('  Map size:', localMapData.width, 'x', localMapData.height);
+        
+        // Convert robot world coordinates to pixel coordinates for validation
+        const [pixelX, pixelY] = MapParser.worldToPixel(robotPose.position.x, robotPose.position.y, localMapData);
+        console.log('  Robot pixel coords:', pixelX, pixelY);
+        console.log('  Pixel coords valid:', pixelX >= 0 && pixelX < localMapData.width && pixelY >= 0 && pixelY < localMapData.height);
+        
+        // Convert back to world to verify conversion
+        const [verifyWorldX, verifyWorldY] = MapParser.pixelToWorld(pixelX, pixelY, localMapData);
+        console.log('  Verify world coords:', verifyWorldX, verifyWorldY);
+      }
+      
+      const newPoint: GoalPoint = {
+        id: `point-robot-${Date.now()}`,
+        name: `Robot Point ${goals.length + 1}`,
+        x: robotPose.position.x,
+        y: robotPose.position.y,
+        timestamp: Date.now(),
+        source: 'robot'
+      };
+      
+      console.log('  New point to add:', newPoint);
+      
+      // Add to local state
+      setGoals(prev => [...prev, newPoint]);
+      
+      // Save to map-specific file
+      const success = await PointDataService.addPointToMap(selectedMap, newPoint);
+      if (success) {
+        console.log('✅ Point from robot pose added successfully:', newPoint);
+      } else {
+        console.error('❌ Failed to save point from robot pose to file');
+      }
+    } else {
+      alert('No robot pose available or map selected');
+    }
+  };
+
+  // Handle mouse move trên map
+  const handleMouseMove = (worldX: number, worldY: number) => {
+    setMouseWorldCoords({ x: worldX, y: worldY });
+    // console.log('🖱️ Mouse world coords updated:', { x: worldX, y: worldY });
+  };
+
+  // Handle map click để tạo goal
+  const handleMapClick = async (worldX: number, worldY: number) => {
+    // Update mouse world coordinates for tracking
+    setMouseWorldCoords({ x: worldX, y: worldY });
+    
+    // Only add point if in add point mode
+    if (isAddPointMode && selectedMap) {
+      console.log('🎯 Adding point from map click:');
+      console.log('  Click world coords:', { x: worldX, y: worldY });
+      
+      const newPoint: GoalPoint = {
+        id: `point-click-${Date.now()}`,
+        name: `Click Point ${goals.length + 1}`,
+        x: worldX,
+        y: worldY,
+        timestamp: Date.now(),
+        source: 'manual'
+      };
+
+      // Add to local state
+      setGoals(prev => [...prev, newPoint]);
+      
+      // Save to map-specific file
+      const success = await PointDataService.addPointToMap(selectedMap, newPoint);
+      if (success) {
+        console.log('✅ Point from click added successfully:', newPoint);
+      } else {
+        console.error('❌ Failed to save point from click to file');
+      }
+    }
   };
 
   // Handle velocity control
@@ -305,6 +406,7 @@ function App() {
                   goals={goals}
                   onMapClick={handleMapClick}
                   onGoalClick={handleGoalClick}
+                  onMouseMove={handleMouseMove}
                   selectedGoalId={selectedGoalId}
                   className="w-full h-full"
                 />
@@ -362,55 +464,48 @@ function App() {
                     </button>
                     
                     {expandedSections.editMaps && (
-                      <div className="p-3 space-y-2 bg-white border-t border-gray-100">
-                        <button
-                          onClick={() => console.log('Add Point mode activated - click on map')}
-                          className="w-full px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-medium transition-colors"
-                        >
-                          Add Point
-                        </button>
-                        <button
-                          onClick={handleEditSelectedGoal}
-                          disabled={!selectedGoalId}
-                          className={`w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                            selectedGoalId 
-                              ? 'bg-gray-800 text-white hover:bg-gray-900' 
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          Edit Selected
-                        </button>
-                        <button
-                          onClick={handleDeleteSelectedGoal}
-                          disabled={!selectedGoalId}
-                          className={`w-full px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                            selectedGoalId 
-                              ? 'bg-red-600 text-white hover:bg-red-700' 
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          Delete Selected
-                        </button>
-                        
-                        {/* Selected Goal Info */}
-                        {selectedGoalId && (
-                          <div className="mt-2 p-2 bg-blue-50 rounded-md text-xs border border-blue-100">
-                            <p className="font-medium text-blue-800 mb-1">Selected Goal:</p>
-                            {(() => {
-                              const goal = goals.find(g => g.id === selectedGoalId);
-                              return goal ? (
-                                <div className="space-y-0.5 text-blue-700">
-                                  <p><span className="font-medium">Name:</span> {goal.name}</p>
-                                  <p><span className="font-medium">Position:</span> ({goal.x.toFixed(2)}, {goal.y.toFixed(2)})</p>
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        )}
-                        
-                        <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded-md border border-blue-100">
-                          💡 Click on map to add goals
+                      <div className="p-3 space-y-3 bg-white border-t border-gray-100">
+                        {/* Point Addition Methods */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={handleAddPointFromRobot}
+                            disabled={!robotPose}
+                            className={`px-2 py-2 rounded-md text-xs font-medium transition-colors flex flex-col items-center ${
+                              robotPose 
+                                ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={robotPose ? `Add point at robot: (${robotPose.position.x.toFixed(2)}, ${robotPose.position.y.toFixed(2)})` : 'Robot position not available'}
+                          >
+                            <span className="font-medium">Add Current Pose</span>
+                            {robotPose && (
+                              <span className="text-xs opacity-90 mt-0.5">({robotPose.position.x.toFixed(2)}, {robotPose.position.y.toFixed(2)})</span>
+                            )}
+                          </button>
+                          <button
+                            onClick={handleToggleAddPointMode}
+                            className={`px-2 py-2 rounded-md text-xs font-medium transition-colors flex flex-col items-center ${
+                              isAddPointMode 
+                                ? 'bg-red-600 text-white hover:bg-red-700' 
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
+                            title={isAddPointMode ? 'Click to exit add point mode' : 'Click to enter add point mode, then click on map to add points'}
+                          >
+                            <span className="font-medium">{isAddPointMode ? 'Exit Add Mode' : 'Add by Point'}</span>
+                            {isAddPointMode && (
+                              <span className="text-xs opacity-90 mt-0.5">Click map to add</span>
+                            )}
+                            {mouseWorldCoords && (
+                              <span className="text-xs opacity-90 mt-0.5">({mouseWorldCoords.x.toFixed(2)}, {mouseWorldCoords.y.toFixed(2)})</span>
+                            )}
+                          </button>
                         </div>
+                        
+                        {/* Quick Info */}
+                        <div className="text-center text-xs text-gray-500">
+                          <p>💡 Click any point on map to select and edit</p>
+                        </div>
+                        
                       </div>
                     )}
                   </div>
