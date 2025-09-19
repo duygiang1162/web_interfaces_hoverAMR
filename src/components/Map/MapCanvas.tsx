@@ -7,11 +7,12 @@ interface MapCanvasProps {
   goals: GoalPoint[];
   onMapClick?: (worldX: number, worldY: number) => void;
   onGoalClick?: (goalId: string) => void;
+  onMouseMove?: (worldX: number, worldY: number) => void;
   selectedGoalId?: string | null;
   className?: string;
 }
 
-export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, selectedGoalId, className }: MapCanvasProps) {
+export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, onMouseMove, selectedGoalId, className }: MapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
@@ -75,18 +76,29 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
 
   // Draw Goals function
   const drawGoals = useCallback((ctx: CanvasRenderingContext2D, goals: GoalPoint[], mapData: MapData) => {
+    // Map canvas offset (SAME AS ROBOT)
+    const mapCanvasX = -mapData.origin[0] / mapData.resolution;
+    const mapCanvasY = -mapData.origin[1] / mapData.resolution;
+    
     goals.forEach((goal) => {
-      // Convert world coordinates to pixel coordinates
-      const goalPixelX = (goal.x - mapData.origin[0]) / mapData.resolution;
-      const goalPixelY = (-goal.y - mapData.origin[1]) / mapData.resolution; // Y-flip
-
+      // Convert world coordinates to pixel coordinates (SAME AS ROBOT)
+      const goalMapX = (goal.x - mapData.origin[0]) / mapData.resolution;
+      const goalMapY = (goal.y - mapData.origin[1]) / mapData.resolution;
+      const goalPixelY = mapData.height - 1 - goalMapY; // Flip Y for PGM format (SAME AS ROBOT)
+      
+      // Apply map canvas offset (SAME AS ROBOT)
+      const goalCanvasX = mapCanvasX + goalMapX;
+      const goalCanvasY = mapCanvasY + goalPixelY;
+      
+      // console.log(`🎯 Goal "${goal.name}" world:(${goal.x.toFixed(3)}, ${goal.y.toFixed(3)}) -> canvas:(${goalCanvasX.toFixed(1)}, ${goalCanvasY.toFixed(1)})`);
+      
       // Draw goal circle
       const isSelected = selectedGoalId === goal.id;
       const goalSize = isSelected ? 8 / scale : 6 / scale;
       
       ctx.save();
       ctx.beginPath();
-      ctx.arc(goalPixelX, goalPixelY, goalSize, 0, 2 * Math.PI);
+      ctx.arc(goalCanvasX, goalCanvasY, goalSize, 0, 2 * Math.PI);
       
       // Goal styling
       if (isSelected) {
@@ -107,7 +119,7 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
         ctx.fillStyle = '#374151';
         ctx.font = `${10 / scale}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText(goal.name, goalPixelX, goalPixelY - goalSize - 3 / scale);
+        ctx.fillText(goal.name, goalCanvasX, goalCanvasY - goalSize - 3 / scale);
       }
 
       // Draw goal coordinates (when selected or zoomed in)
@@ -116,7 +128,7 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
         ctx.font = `${8 / scale}px Arial`;
         ctx.textAlign = 'center';
         const coordText = `(${goal.x.toFixed(2)}, ${goal.y.toFixed(2)})`;
-        ctx.fillText(coordText, goalPixelX, goalPixelY + goalSize + 12 / scale);
+        ctx.fillText(coordText, goalCanvasX, goalCanvasY + goalSize + 12 / scale);
       }
 
       ctx.restore();
@@ -419,14 +431,28 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
         // worldX = origin[0] + (pixelX * resolution)
         // worldY = origin[1] + ((height - 1 - pixelY) * resolution)
         const worldX = mapData.origin[0] + (mapPixelX * mapData.resolution);
-        const worldY = mapData.origin[1] + ((mapData.height - 1 - mapPixelY) * mapData.
-        resolution);
-    
+        const worldY = mapData.origin[1] + ((mapData.height - 1 - mapPixelY) * mapData.resolution);
         
-
+        // Debug logs
+        // console.log('🐭 Mouse move debug:', {
+        //   canvasPos: { x: canvasX, y: canvasY },
+        //   transformedPos: { x: transformedX, y: transformedY },
+        //   mapCanvasPos: { x: mapCanvasX, y: mapCanvasY },
+        //   mapPixelPos: { x: mapPixelX, y: mapPixelY },
+        //   worldPos: { x: worldX, y: worldY },
+        //   mapOrigin: mapData.origin,
+        //   mapResolution: mapData.resolution,
+        //   scale,
+        //   offset
+        // });
         
         setMouseCoords({ x: worldX, y: worldY });
         setShowMouseCoords(true);
+        
+        // Call parent callback with world coordinates
+        if (onMouseMove) {
+          onMouseMove(worldX, worldY);
+        }
 
         // Change cursor based on what's being hovered over
         if (!isDragging && !isRotating) {
@@ -436,12 +462,21 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
             let hoveringGoal = false;
             const goalHoverRadius = 12; // pixels
             
+            // Map canvas offset (SAME AS ROBOT)
+            const mapCanvasX = -mapData.origin[0] / mapData.resolution;
+            const mapCanvasY = -mapData.origin[1] / mapData.resolution;
+            
             goals.forEach((goal) => {
-              const goalPixelX = (goal.x - mapData.origin[0]) / mapData.resolution;
-              const goalPixelY = (-goal.y - mapData.origin[1]) / mapData.resolution;
+              const goalMapX = (goal.x - mapData.origin[0]) / mapData.resolution;
+              const goalMapY = (goal.y - mapData.origin[1]) / mapData.resolution;
+              const goalPixelY = mapData.height - 1 - goalMapY; // Flip Y for PGM format
               
-              const transformedGoalX = (mapCanvasX + goalPixelX) * scale + offset.x;
-              const transformedGoalY = (mapCanvasY + goalPixelY) * scale + offset.y;
+              // Apply map canvas offset (SAME AS ROBOT)
+              const goalCanvasX = mapCanvasX + goalMapX;
+              const goalCanvasY = mapCanvasY + goalPixelY;
+              
+              const transformedGoalX = (mapCanvasX + goalCanvasX) * scale + offset.x;
+              const transformedGoalY = (mapCanvasY + goalCanvasY) * scale + offset.y;
               
               const distance = Math.sqrt(
                 (event.clientX - rect.left - transformedGoalX) ** 2 + 
@@ -510,11 +545,20 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
       let clickedGoal: GoalPoint | null = null;
       const goalClickRadius = 12; // pixels
 
+      // Map canvas offset (SAME AS ROBOT)
+      const mapCanvasX = -mapData.origin[0] / mapData.resolution;
+      const mapCanvasY = -mapData.origin[1] / mapData.resolution;
+      
       goals.forEach((goal) => {
-        const goalPixelX = (goal.x - mapData.origin[0]) / mapData.resolution;
-        const goalPixelY = (-goal.y - mapData.origin[1]) / mapData.resolution;
+        const goalMapX = (goal.x - mapData.origin[0]) / mapData.resolution;
+        const goalMapY = (goal.y - mapData.origin[1]) / mapData.resolution;
+        const goalPixelY = mapData.height - 1 - goalMapY; // Flip Y for PGM format
         
-        const distance = Math.sqrt((canvasX - goalPixelX) ** 2 + (canvasY - goalPixelY) ** 2);
+        // Apply map canvas offset (SAME AS ROBOT)
+        const goalCanvasX = mapCanvasX + goalMapX;
+        const goalCanvasY = mapCanvasY + goalPixelY;
+        
+        const distance = Math.sqrt((canvasX - goalCanvasX) ** 2 + (canvasY - goalCanvasY) ** 2);
         if (distance <= goalClickRadius / scale) {
           clickedGoal = goal;
         }
@@ -522,7 +566,7 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
 
       if (clickedGoal && onGoalClick) {
         // Goal was clicked
-        onGoalClick(clickedGoal.id);
+        onGoalClick((clickedGoal as GoalPoint).id);
         console.log('Goal clicked:', clickedGoal);
       } else if (onMapClick && event.button === 0) {
         // Map was clicked (left button only)
@@ -652,15 +696,7 @@ export function MapCanvas({ mapData, robotPose, goals, onMapClick, onGoalClick, 
         </div>
       </div>
 
-      {/* Mouse coordinates display */}
-      {showMouseCoords && (
-        <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded text-sm">
-          <div className="text-green-400 text-xs mb-1">Mouse Position</div>
-          <div>X: {mouseCoords.x.toFixed(3)}m</div>
-          <div>Y: {mouseCoords.y.toFixed(3)}m</div>
-          <div className="text-blue-400 text-xs mt-1">Rotation: {Math.round(rotation % 360)}°</div>
-        </div>
-      )}
+  
       
       
     </div>
